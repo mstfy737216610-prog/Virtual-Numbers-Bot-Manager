@@ -1,0 +1,8 @@
+{
+  "name": "Virtual Numbers Bot Manager",
+  "description": "A comprehensive management dashboard for virtual numbers Telegram bots, with code generation for Bot Business platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
