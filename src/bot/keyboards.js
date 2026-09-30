@@ -1,26 +1,19 @@
-export const mainKeyboard = () => ({
-  inline_keyboard: [
-    [{ text: 'لديكَ حساب؟ تسجيل دخول 📲', callback_data: 'login' }],
-    [{ text: 'إنشاء حساب جديد ☑️', callback_data: 'signup' }],
-    [{ text: 'شروط الإستخدام 🚨', callback_data: 'terms' }],
-    [{ text: 'إحصائيات البوت 📊', callback_data: 'stats' }],
-    [{ text: 'إدارة البوت 👨🏻‍💻', callback_data: 'admin' }]
-  ]
-});
+export const mainKeyboard = () => ({ inline_keyboard: [
+  [{ text: 'شراء رقم ☎️', callback_data: 'buy' }],
+  [{ text: 'حسابي 💰', callback_data: 'balance' }, { text: 'طلباتي 🧾', callback_data: 'orders' }],
+  [{ text: 'تسجيل الدخول 📲', callback_data: 'login' }],
+  [{ text: 'الشروط 🚨', callback_data: 'terms' }, { text: 'الإحصائيات 📊', callback_data: 'stats' }]
+] });
 
-export const adminKeyboard = () => ({
-  inline_keyboard: [
-    [{ text: 'إضافة مزود ↗️', callback_data: 'admin_add_provider' }, { text: 'إدارة المزودين 🧩', callback_data: 'admin_list_providers' }],
-    [{ text: 'إضافة تطبيق 📱', callback_data: 'admin_add_app' }, { text: 'إدارة التطبيقات 🗂️', callback_data: 'admin_list_apps' }],
-    [{ text: 'إضافة قناة 📢', callback_data: 'admin_add_channel' }, { text: 'إدارة القنوات 📣', callback_data: 'admin_list_channels' }],
-    [{ text: 'إضافة سعر 💰', callback_data: 'admin_add_price' }, { text: 'إدارة الاسعار 💸', callback_data: 'admin_list_prices' }],
-    [{ text: 'إضافة رصيد للمستخدم ➕', callback_data: 'admin_add_coin' }, { text: 'خصم رصيد 📛', callback_data: 'admin_dec_coin' }],
-    [{ text: 'إحصائيات البوت 📈', callback_data: 'admin_stats' }, { text: 'رجوع 🔙', callback_data: 'startup' }]
-  ]
-});
+export const adminKeyboard = () => ({ inline_keyboard: [
+  [{ text: 'المزودون 🧩', callback_data: 'admin:list_providers' }, { text: 'إضافة مزود ➕', callback_data: 'admin:help_provider' }],
+  [{ text: 'السيرفرات 🖥️', callback_data: 'admin:list_servers' }, { text: 'إضافة سيرفر ➕', callback_data: 'admin:help_server' }],
+  [{ text: 'التطبيقات 📱', callback_data: 'admin:list_apps' }, { text: 'إضافة تطبيق ➕', callback_data: 'admin:help_app' }],
+  [{ text: 'الدول 🌍', callback_data: 'admin:list_countries' }, { text: 'إضافة دولة ➕', callback_data: 'admin:help_country' }],
+  [{ text: 'الأسعار 💰', callback_data: 'admin:list_prices' }, { text: 'إضافة سعر ➕', callback_data: 'admin:help_price' }],
+  [{ text: 'القنوات 📢', callback_data: 'admin:list_channels' }, { text: 'إضافة قناة ➕', callback_data: 'admin:help_channel' }],
+  [{ text: 'شحن رصيد ➕', callback_data: 'admin:help_addcoin' }, { text: 'خصم رصيد ➖', callback_data: 'admin:help_delcoin' }],
+  [{ text: 'الإحصائيات 📈', callback_data: 'admin:stats' }, { text: 'رجوع 🔙', callback_data: 'startup' }]
+] });
 
-export const buyKeyboard = (providers = []) => ({
-  inline_keyboard: providers.map((provider) => [
-    { text: provider.name, callback_data: `buy_provider:${provider.code}` }
-  ])
-});
+export const backKeyboard = (callback = 'startup') => ({ inline_keyboard: [[{ text: 'رجوع 🔙', callback_data: callback }]] });
