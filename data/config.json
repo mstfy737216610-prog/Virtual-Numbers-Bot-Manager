@@ -1,0 +1,40 @@
+{
+  "admin_ids": ["8338869162"],
+  "default_provider": "herosms",
+  "providers": {
+    "5sim": {
+      "enabled": true,
+      "api_key": "",
+      "countries": [
+        { "code": "england", "name": "England (Vodafone)", "enabled": true, "price": 2.5 }
+      ]
+    },
+    "herosms": {
+      "enabled": true,
+      "api_key": "",
+      "provider_id": 1513844,
+      "base_url": "https://hero-sms.com/api/v1",
+      "countries": [
+        { "code": "us", "name": "United States", "enabled": true, "price": 2.1 }
+      ]
+    },
+    "spark": {
+      "enabled": true,
+      "api_key": "",
+      "provider_id": 4437001,
+      "base_url": "https://hero-sms.com/api/v1",
+      "countries": [
+        { "code": "us", "name": "United States", "enabled": true, "price": 1.9 }
+      ]
+    }
+  },
+  "channels": [
+    { "name": "Telegram", "enabled": true },
+    { "name": "Instagram", "enabled": true },
+    { "name": "TikTok", "enabled": true }
+  ],
+  "bot": {
+    "name": "بوتي بوتي بوتي",
+    "currency": "USD"
+  }
+}
