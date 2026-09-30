@@ -1,37 +1,43 @@
-import ProviderAdapter from './base.js';
-import fetch from 'node-fetch';
-
-export default class TempNumAdapter extends ProviderAdapter {
-  constructor(config = {}) {
-    super(config);
-    this.apiKey = config.api_key || process.env.TEMPNUM_API_KEY || '';
-    this.baseUrl = config.base_url || 'https://tempnum.org';
+export default class TempNumAdapter {
+  constructor(server = {}) {
+    this.apiKey = server.api_key || process.env.TEMPNUM_API_KEY || '';
+    this.base = server.base_url || 'https://tempnum.org/stubs/handler_api.php';
   }
 
-  async getNumber({ app, country, operator }) {
-    if (!this.apiKey) return { status: 0, message: 'no key' };
+  async fetchRaw(params) {
+    const url = new URL(this.base);
+    Object.keys(params).forEach(k => url.searchParams.append(k, params[k]));
+    const res = await fetch(url.toString(), { method: 'GET' });
+    const text = await res.text();
+    return text;
+  }
+
+  async getNumber({ app, country, operator = 'any' } = {}) {
     try {
-      const url = `${this.baseUrl}/stubs/handler_api.php?api_key=${this.apiKey}&action=getNumber&service=${app}&country=${country}`;
-      const res = await fetch(url);
-      const text = await res.text();
-      // format: ACCESS_NUMBER:ID:NUMBER
+      const text = await this.fetchRaw({ api_key: this.apiKey, action: 'getNumber', service: app, country });
+      // tempnum returns colon-separated values in many implementations: e.g. ACCESS:ID:NUMBER
+      if (!text) return { status: 500, message: 'empty response' };
       const parts = text.split(':');
-      return { status: res.ok ? 200 : 0, idnumber: parts[1] || '', number: parts[2] || '', raw: text };
+      // try to find id and number
+      let id = parts[1] || null;
+      let phone = parts[2] || parts[1] || null;
+      // if only one token returned, treat it as number
+      if (parts.length === 1) { phone = parts[0]; id = parts[0]; }
+      return { status: 200, message: 'ok', number: phone || null, idnumber: id || null, raw: text };
     } catch (e) {
-      return { status: 0, message: e.message };
+      return { status: 500, message: e.message };
     }
   }
 
-  async getStatus({ idnumber }) {
-    if (!this.apiKey) return { status: 0 };
+  async getStatus({ idnumber, number } = {}) {
     try {
-      const url = `${this.baseUrl}/stubs/handler_api.php?action=getStatus&api_key=${this.apiKey}&id=${idnumber}`;
-      const res = await fetch(url);
-      const text = await res.text();
-      const parts = text.split(':');
-      return { status: text ? 200 : 0, code: parts[1] || null, raw: text };
+      if (!idnumber) return { status: 400, message: 'missing idnumber' };
+      // many tempnum-like APIs expose getMessages or getStatus
+      const text = await this.fetchRaw({ api_key: this.apiKey, action: 'getMessages', id: idnumber });
+      if (!text) return { status: 204, message: 'no messages' };
+      return { status: 200, message: 'ok', raw: text };
     } catch (e) {
-      return { status: 0 };
+      return { status: 500, message: e.message };
     }
   }
 }

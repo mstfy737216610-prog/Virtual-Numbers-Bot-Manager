@@ -1,36 +1,41 @@
-import ProviderAdapter from './base.js';
-import fetch from 'node-fetch';
-
-export default class OnlineSimAdapter extends ProviderAdapter {
-  constructor(config = {}) {
-    super(config);
-    this.apiKey = config.api_key || process.env.ONLINESIM_API_KEY || '';
-    this.baseUrl = config.base_url || 'https://onlinesim.io';
+export default class OnlineSimAdapter {
+  constructor(server = {}) {
+    this.apiKey = server.api_key || process.env.ONLINESIM_API_KEY || '';
+    this.base = (server.base_url || 'https://onlinesim.io').replace(/\/$/, '');
   }
 
-  async getNumber({ app, country, operator }) {
-    if (!this.apiKey) return { status: 0, message: 'no key' };
+  async getJson(url) {
+    const res = await fetch(url, { method: 'GET' });
+    const text = await res.text();
+    try { return JSON.parse(text); } catch (e) { return null; }
+  }
+
+  async getNumber({ app, country, operator = 'any' } = {}) {
     try {
-      const url = `${this.baseUrl}/api/getNum.php?apikey=${this.apiKey}&app=${app}&country=${country}`;
-      const res = await fetch(url);
-      const json = await res.json();
-      // map fields
-      return { status: json ? 200 : 0, idnumber: json.tzid || '', number: (json.number ? json.number : (json[0] && json[0].number) || ''), raw: json };
+      const url = `${this.base}/api/getNum.php?apikey=${encodeURIComponent(this.apiKey)}&app=${encodeURIComponent(app)}&country=${encodeURIComponent(country)}`;
+      const api = await this.getJson(url);
+      // API returns tzid in many variants
+      const id = api?.tzid || api?.id || (api && api[0] && api[0].tzid) || null;
+      let number = null;
+      if (id) {
+        const st = await this.getJson(`${this.base}/api/getState.php?apikey=${encodeURIComponent(this.apiKey)}&tzid=${encodeURIComponent(id)}`);
+        number = st && st[0] && st[0].number ? st[0].number : (st && st.number) || null;
+      }
+      return { status: 200, message: 'ok', number, idnumber: id, raw: { api, state: number ? true : null } };
     } catch (e) {
-      return { status: 0, message: e.message };
+      return { status: 500, message: e.message };
     }
   }
 
-  async getStatus({ idnumber }) {
-    if (!this.apiKey) return { status: 0 };
+  async getStatus({ idnumber, number } = {}) {
     try {
-      const url = `${this.baseUrl}/api/getState.php?apikey=${this.apiKey}&tzid=${idnumber}`;
-      const res = await fetch(url);
-      const json = await res.json();
-      const code = json && json[0] && json[0].msg ? json[0].msg : null;
-      return { status: code ? 200 : 0, code, raw: json };
+      if (!idnumber) return { status: 400, message: 'missing idnumber' };
+      const st = await this.getJson(`${this.base}/api/getState.php?apikey=${encodeURIComponent(this.apiKey)}&tzid=${encodeURIComponent(idnumber)}`);
+      // try to extract sms/code
+      const code = (st && st[0] && st[0].sms) || (st && st.sms) || null;
+      return { status: 200, message: 'ok', code, raw: st };
     } catch (e) {
-      return { status: 0 };
+      return { status: 500, message: e.message };
     }
   }
 }
