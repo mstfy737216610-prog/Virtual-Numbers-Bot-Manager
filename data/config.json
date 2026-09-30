@@ -1,19 +1,18 @@
 {
   "admin_ids": ["8338869162"],
-  "default_provider": "5sim",
+  "default_provider": "herosms",
   "providers": {
     "5sim": {
       "enabled": true,
       "api_key": "",
       "countries": [
-        { "code": "us", "name": "United States", "enabled": true, "price": 2.5 },
-        { "code": "uk", "name": "United Kingdom", "enabled": true, "price": 2.8 },
-        { "code": "sa", "name": "Saudi Arabia", "enabled": true, "price": 2.2 }
+        { "code": "us", "name": "United States", "enabled": true, "price": 2.5 }
       ]
     },
     "herosms": {
       "enabled": true,
       "api_key": "",
+      "provider_id": 1513844,
       "countries": [
         { "code": "us", "name": "United States", "enabled": true, "price": 2.1 }
       ]
