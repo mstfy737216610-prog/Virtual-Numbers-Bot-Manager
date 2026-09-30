@@ -1,10 +1,28 @@
 // BJS Library for SMS Providers
-// Unified provider wrapper for 5sim and HeroSMS (improved for HeroSMS API)
+// Unified provider wrapper for 5sim, HeroSMS and Spark (uses similar HeroSMS-style endpoints)
 
-var HERO_BASE = 'https://hero-sms.com/api/v1';
+var DEFAULT_HERO_BASE = 'https://hero-sms.com/api/v1';
+
+function getProviderConfig(site) {
+  var cfg = Bot.getProperty('config') || (function(){ try { var r = HTTP.get('https://raw.githubusercontent.com/mstfy737216610-prog/Virtual-Numbers-Bot-Manager/main/data/config.json'); return r && r.status==200 ? JSON.parse(r.body) : {}; } catch(e){ return {}; } })();
+  return (cfg.providers && cfg.providers[site]) || {};
+}
+
+function getApiKeyFor(site, params) {
+  // priority: params.api_key -> runtime config -> Bot env property -> empty
+  if (params && params.api_key) return params.api_key;
+  var pc = getProviderConfig(site);
+  if (pc && pc.api_key) return pc.api_key;
+  // Bot properties or environment-like keys (if deploy attaches them)
+  var envKey = Bot.getProperty(site + '_api_key') || Bot.getProperty(site + '_API_KEY');
+  if (envKey) return envKey;
+  return '';
+}
 
 function getProviderRequest(site, action, params) {
-  var api_key = params && params.api_key ? params.api_key : '';
+  var pc = getProviderConfig(site);
+  var api_key = getApiKeyFor(site, params) || '';
+  var base = (pc && pc.base_url) || DEFAULT_HERO_BASE;
   var url = '';
   var headers = {};
 
@@ -30,7 +48,8 @@ function getProviderRequest(site, action, params) {
     }
   }
 
-  if (site == 'herosms') {
+  // Hero-like providers: herosms, spark
+  if (site == 'herosms' || site == 'spark') {
     headers = {
       Authorization: 'ApiKey ' + api_key,
       Accept: 'application/json',
@@ -38,29 +57,26 @@ function getProviderRequest(site, action, params) {
     };
 
     if (action == 'getNum') {
-      url = HERO_BASE + '/activations';
+      url = base + '/activations';
       var body = {
         service: params.app || params.service || 'tg',
         country: parseInt(params.country)
       };
-      // include provider id if present
       if (params.provider_id) body.provider_id = params.provider_id;
       return { url: url, headers: headers, method: 'POST', body: JSON.stringify(body) };
     }
 
     if (action == 'getStatus') {
-      // prefer activationId if provided
       if (params.activationId) {
-        url = HERO_BASE + '/activations/' + params.activationId;
+        url = base + '/activations/' + params.activationId;
         return { url: url, headers: headers, method: 'GET' };
       }
-      // fallback to list activations
-      url = HERO_BASE + '/activations';
+      url = base + '/activations';
       return { url: url, headers: headers, method: 'GET' };
     }
 
     if (action == 'getBalance') {
-      url = HERO_BASE + '/activations/stats';
+      url = base + '/activations/stats';
       return { url: url, headers: headers, method: 'GET' };
     }
   }
@@ -72,7 +88,6 @@ function httpRequest(request) {
   if (!request) return { ok: false, error: 'invalid_request' };
   try {
     var res = HTTP.request(request);
-    // normalize common response shapes
     var body = res && res.body ? (typeof res.body === 'string' ? (function(){ try { return JSON.parse(res.body); } catch(e){ return res.body; } })() : res.body) : null;
     return { ok: true, status: res.status, data: body, raw: res };
   } catch (e) {
@@ -85,7 +100,6 @@ function buyNumber(site, params) {
   if (!request) return { ok: false, error: 'Provider not supported' };
   var res = httpRequest(request);
   if (!res.ok) return res;
-  // HeroSMS returns activation object inside data
   return res;
 }
 
