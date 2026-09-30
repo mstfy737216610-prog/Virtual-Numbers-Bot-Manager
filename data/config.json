@@ -1,0 +1,31 @@
+{
+  "admin_ids": ["8338869162"],
+  "default_provider": "5sim",
+  "providers": {
+    "5sim": {
+      "enabled": true,
+      "api_key": "",
+      "countries": [
+        { "code": "us", "name": "United States", "enabled": true, "price": 2.5 },
+        { "code": "uk", "name": "United Kingdom", "enabled": true, "price": 2.8 },
+        { "code": "sa", "name": "Saudi Arabia", "enabled": true, "price": 2.2 }
+      ]
+    },
+    "herosms": {
+      "enabled": true,
+      "api_key": "",
+      "countries": [
+        { "code": "us", "name": "United States", "enabled": true, "price": 2.1 }
+      ]
+    }
+  },
+  "channels": [
+    { "name": "Telegram", "enabled": true },
+    { "name": "Instagram", "enabled": true },
+    { "name": "TikTok", "enabled": true }
+  ],
+  "bot": {
+    "name": "Virtual Numbers Bot",
+    "currency": "USD"
+  }
+}
