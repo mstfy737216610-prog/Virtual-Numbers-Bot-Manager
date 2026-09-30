@@ -1,5 +1,5 @@
-import db from '../db/index.js';
-import { mainKeyboard, adminKeyboard } from './keyboards.js';
+import db from '../../db/index.js';
+import { mainKeyboard, adminKeyboard } from '../keyboards.js';
 
 export async function handleStart(ctx) {
   const adminId = String(process.env.DEFAULT_ADMIN || '8338869162');
@@ -8,8 +8,7 @@ export async function handleStart(ctx) {
   const markup = userId === adminId ? adminKeyboard() : mainKeyboard();
   const text = userId === adminId
     ? '♐️ - مرحبا بك مطور البوت 👨‍💻\n\n- لوحة التحكم متاحة الآن.'
-    : '♐️ - مرحبا بك [' + (ctx.from.first_name || 'مستخدم') + '](tg://user?id=' + ctx.from.id + ') ؛ 🤍\n\n*- في بوت @Next_Plus_BOTp* ؛ البوت الأفضل على التليجرام والذي يقوم بتوفير *خدمات الأرقام الوهمية*.
-\n*- قم بإنشاء حساب جديد* ، واذا كان لديك حساب من قبل: قم بالضغط على زر *تسجيل الدخول* ☑️';
+    : '♐️ - مرحبا بك [' + (ctx.from.first_name || 'مستخدم') + '](tg://user?id=' + ctx.from.id + ') ؛ 🤍\n\n*- في بوت @Next_Plus_BOTp* ؛ البوت الأفضل على التليجرام والذي يقوم بتوفير *خدمات الأرقام الوهمية*.\n\n*- قم بإنشاء حساب جديد* ، واذا كان لديك حساب من قبل: قم بالضغط على زر *تسجيل الدخول* ☑️';
 
   if (ctx.updateType === 'callback_query') {
     return ctx.editMessageText(text, {
@@ -39,7 +38,7 @@ export async function handleStats(ctx) {
 }
 
 export async function handleTerms(ctx) {
-  const text = '• *مرحبا بك عزيزي في قسم التعليمات والشروط.*\n\n• *شروط البوت :* ↘️\n\n- هذا البوت يقوم بجلب أرقام وهمية لكل خدمات التواصل الاجتماعي.\n- لا يتحمل البوت مسؤولية الأرقام بعد شرائها.\n\n• *للاستفسار*: @Engku8';
+  const text = '• *مرحبا بك عزيزي في قسم التعليمات والشروط.*\n\n• *شروط البوت :* ↘️\n\n- هذا البوت يقوم بجلب أرقام وهمية لجميع خدمات التواصل الاجتماعي.\n- لا يتحمل البوت مسؤولية الأرقام بعد شرائها.\n\n• *للاستفسار*: @Engku8';
   return ctx.reply(text, {
     parse_mode: 'Markdown',
     reply_markup: mainKeyboard()
@@ -48,22 +47,30 @@ export async function handleTerms(ctx) {
 
 export async function handleLogin(ctx) {
   const text = '♻️ - يرجى إرسال إيميلك أو اسم المستخدم الخاص بك لتسجيل الدخول.';
-  return ctx.reply(text, {
-    parse_mode: 'Markdown',
-    reply_markup: mainKeyboard()
-  });
+  return ctx.reply(text, { parse_mode: 'Markdown', reply_markup: mainKeyboard() });
 }
 
 export async function handleSignup(ctx) {
   const text = '✅ - أرسل كلمة المرور المراد تعيينها أو اكتب "signup <pass>" إذا كنت تستخدم الأمر النصي.';
-  return ctx.reply(text, {
-    parse_mode: 'Markdown',
-    reply_markup: mainKeyboard()
-  });
+  return ctx.reply(text, { parse_mode: 'Markdown', reply_markup: mainKeyboard() });
 }
 
 export async function handleAdmin(ctx) {
-  return ctx.reply('🛠️ - لوحة الإدارة', {
-    reply_markup: adminKeyboard()
-  });
+  return ctx.reply('🛠️ - لوحة الإدارة', { reply_markup: adminKeyboard() });
+}
+
+export function getOrCreateUserFromTelegram(from) {
+  if (!from) return null;
+  let user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(String(from.id));
+  if (!user) {
+    const email = `${(from.username || 'user').toLowerCase()}@bot.local`;
+    const result = db.prepare(`INSERT INTO users (telegram_id, username, email, password_hash, role, balance) VALUES (?, ?, ?, ?, ?, 0)`).run(String(from.id), from.username || '', email, 'demo-password', 'user');
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+  }
+  return user;
+}
+
+export function ensureAdmin(ctx) {
+  const admin = String(process.env.DEFAULT_ADMIN || '8338869162');
+  return String(ctx.from.id) === admin;
 }

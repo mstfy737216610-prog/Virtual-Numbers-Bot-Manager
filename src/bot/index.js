@@ -1,92 +1,146 @@
-import express from 'express';
+import { Telegraf } from 'telegraf';
+import { config } from '../config.js';
 import db from '../db/index.js';
-import { buildDemoNumberResponse, getProviders, getAppsByProvider, getCountryList, getChannelList } from '../services/providerRegistry.js';
+import { mainKeyboard, adminKeyboard } from './keyboards.js';
+import { handleStart, handleStats, handleTerms, handleLogin, handleSignup, handleAdmin } from './commands/start.js';
+import { executeAdminCommand } from './commands/admin.js';
+import { getOrCreateUserFromTelegram } from './commands/start.js';
+import { getProviders } from '../services/providerRegistry.js';
+import { startBuy, providerSelected, appSelected, countrySelected, confirmBuy } from './commands/buy.js';
 
-export function startApi() {
-  const app = express();
-  app.use(express.json());
+export function startBot() {
+  if (!config.BOT_TOKEN) {
+    console.warn('BOT_TOKEN is not set. Bot will not start.');
+    return null;
+  }
 
-  app.get('/health', (req, res) => {
-    res.json({ ok: true, service: 'virtual-numbers-bot-manager' });
+  const bot = new Telegraf(config.BOT_TOKEN);
+
+  bot.start(async (ctx) => {
+    await handleStart(ctx);
   });
 
-  app.get('/api/providers', (req, res) => {
-    res.json(getProviders());
+  bot.command('admin', async (ctx) => {
+    await handleAdmin(ctx);
   });
 
-  app.post('/api/providers', (req, res) => {
-    const { name, code } = req.body || {};
-    if (!name || !code) {
-      return res.status(400).json({ error: 'name and code are required' });
+  bot.command('stats', async (ctx) => {
+    await handleStats(ctx);
+  });
+
+  bot.command('buy', async (ctx) => {
+    await startBuy(ctx);
+  });
+
+  bot.action('startup', async (ctx) => {
+    await handleStart(ctx);
+  });
+
+  bot.action('login', async (ctx) => {
+    await handleLogin(ctx);
+  });
+
+  bot.action('signup', async (ctx) => {
+    await handleSignup(ctx);
+  });
+
+  bot.action('terms', async (ctx) => {
+    await handleTerms(ctx);
+  });
+
+  bot.action('stats', async (ctx) => {
+    await handleStats(ctx);
+  });
+
+  bot.action('admin', async (ctx) => {
+    await handleAdmin(ctx);
+  });
+
+  bot.action(/^admin_(.+)$/, async (ctx) => {
+    const action = ctx.match[1];
+    const adminActions = {
+      add_provider: 'admin_add_provider',
+      list_providers: 'admin_list_providers',
+      add_app: 'admin_add_app',
+      list_apps: 'admin_list_apps',
+      add_channel: 'admin_add_channel',
+      list_channels: 'admin_list_channels',
+      add_price: 'admin_add_price',
+      list_prices: 'admin_list_prices',
+      add_coin: 'admin_add_coin',
+      dec_coin: 'admin_dec_coin',
+      stats: 'admin_stats',
+    };
+    const realAction = adminActions[action] || action;
+    return ctx.reply(`⚠️ - تم تحديد الإدارة: ${realAction}. استخدم الأوامر النصية في لوحة الإدارة.`);
+  });
+
+  bot.action(/^buy_provider:(.+)$/, async (ctx) => {
+    const providerCode = ctx.match[1];
+    await providerSelected(ctx, providerCode);
+  });
+
+  bot.action(/^buy_app:([^:]+):([^:]+)$/, async (ctx) => {
+    const [, providerCode, appCode] = ctx.match;
+    await appSelected(ctx, providerCode, appCode);
+  });
+
+  bot.action(/^buy_country:([^:]+):([^:]+):([^:]+)$/, async (ctx) => {
+    const [, providerCode, appCode, countryCode] = ctx.match;
+    await countrySelected(ctx, providerCode, appCode, countryCode);
+  });
+
+  bot.action(/^buy_confirm:([^:]+):([^:]+):([^:]+):(.+)$/, async (ctx) => {
+    const [, providerCode, appCode, countryCode, operator] = ctx.match;
+    await confirmBuy(ctx, providerCode, appCode, countryCode, operator || 'any');
+  });
+
+  bot.on('text', async (ctx) => {
+    const text = ctx.message.text.trim();
+    const lower = text.toLowerCase();
+
+    if (lower.startsWith('addprovider ')) {
+      await executeAdminCommand(ctx, text);
+      return;
     }
-    const exists = db.prepare('SELECT id FROM providers WHERE code = ?').get(code);
-    if (exists) return res.status(409).json({ error: 'provider already exists' });
-    const row = db.prepare('INSERT INTO providers (name, code, enabled) VALUES (?, ?, 1)').run(name, code);
-    res.status(201).json({ id: row.lastInsertRowid, name, code });
-  });
-
-  app.get('/api/apps', (req, res) => {
-    const { providerCode } = req.query;
-    if (providerCode) {
-      return res.json(getAppsByProvider(String(providerCode)));
+    if (lower.startsWith('addapp ')) {
+      await executeAdminCommand(ctx, text);
+      return;
     }
-    return res.json(db.prepare('SELECT * FROM apps WHERE enabled = 1 ORDER BY id DESC').all());
-  });
-
-  app.post('/api/apps', (req, res) => {
-    const { providerCode, code, name } = req.body || {};
-    if (!providerCode || !code || !name) {
-      return res.status(400).json({ error: 'providerCode, code and name are required' });
+    if (lower.startsWith('addchannel ')) {
+      await executeAdminCommand(ctx, text);
+      return;
     }
-    const provider = db.prepare('SELECT id FROM providers WHERE code = ?').get(providerCode);
-    if (!provider) return res.status(404).json({ error: 'provider not found' });
-    const row = db.prepare('INSERT INTO apps (provider_id, code, name, enabled) VALUES (?, ?, ?, 1)').run(provider.id, code, name);
-    res.status(201).json({ id: row.lastInsertRowid, providerCode, code, name });
-  });
-
-  app.get('/api/prices', (req, res) => {
-    res.json(db.prepare(`
-      SELECT p.id, p.provider_id, pr.name AS provider_name, p.app_id, a.name AS app_name, p.country_code, p.operator, p.price, p.enabled
-      FROM prices p
-      LEFT JOIN providers pr ON pr.id = p.provider_id
-      LEFT JOIN apps a ON a.id = p.app_id
-      ORDER BY p.id DESC
-    `).all());
-  });
-
-  app.post('/api/prices', (req, res) => {
-    const { providerCode, appCode, countryCode, operator, price } = req.body || {};
-    if (!providerCode || !appCode || !countryCode || price === undefined) {
-      return res.status(400).json({ error: 'providerCode, appCode, countryCode and price are required' });
+    if (lower.startsWith('addprice ')) {
+      await executeAdminCommand(ctx, text);
+      return;
+    }
+    if (lower.startsWith('addcoin ')) {
+      await executeAdminCommand(ctx, text);
+      return;
+    }
+    if (lower.startsWith('delcoin ')) {
+      await executeAdminCommand(ctx, text);
+      return;
+    }
+    if (lower.startsWith('stats')) {
+      await handleStats(ctx);
+      return;
     }
 
-    const provider = db.prepare('SELECT id FROM providers WHERE code = ?').get(providerCode);
-    const app = provider ? db.prepare('SELECT id FROM apps WHERE provider_id = ? AND code = ?').get(provider.id, appCode) : null;
-    if (!provider || !app) return res.status(404).json({ error: 'provider or app not found' });
+    const user = getOrCreateUserFromTelegram(ctx.from);
+    if (!user) {
+      await ctx.reply('حدث خطأ أثناء إنشاء المستخدم.');
+      return;
+    }
 
-    const row = db.prepare('INSERT INTO prices (provider_id, app_id, country_code, operator, price, enabled) VALUES (?, ?, ?, ?, ?, 1)').run(provider.id, app.id, countryCode, operator || 'any', Number(price));
-    res.status(201).json({ id: row.lastInsertRowid, providerCode, appCode, countryCode, operator: operator || 'any', price: Number(price) });
+    await ctx.reply(`👤 - مستخدمك: *${user.username || user.telegram_id}*\n💰 - الرصيد: *${Number(user.balance || 0).toFixed(2)}*`, {
+      parse_mode: 'Markdown',
+      reply_markup: mainKeyboard()
+    });
   });
 
-  app.get('/api/channels', (req, res) => {
-    res.json(getChannelList());
-  });
-
-  app.post('/api/channels', (req, res) => {
-    const { name, type } = req.body || {};
-    if (!name) return res.status(400).json({ error: 'name is required' });
-    const row = db.prepare('INSERT INTO channels (name, type, enabled) VALUES (?, ?, 1)').run(name, type || 'telegram');
-    res.status(201).json({ id: row.lastInsertRowid, name, type: type || 'telegram' });
-  });
-
-  app.get('/api/countries', (req, res) => {
-    res.json(getCountryList());
-  });
-
-  app.post('/api/demo/get-number', (req, res) => {
-    const { countryCode = 'us', appCode = 'wa', providerCode = 'demo' } = req.body || {};
-    res.json(buildDemoNumberResponse({ countryCode, appCode, providerCode }));
-  });
-
-  return app;
+  console.log('Telegram bot started.');
+  bot.launch();
+  return bot;
 }
