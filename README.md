@@ -1,16 +1,43 @@
-# Virtual Numbers Bot - بوتي بوتي بوتي
+# Virtual Numbers Bot Manager
 
-تحديث: أُجريت تصحيحات تغطّي حالات تشغيل مختلفة (بما في ذلك بيئات لا تدعم Api.sendInlineKeyboard).
+Modern MVP for a Telegram bot that can manage:
+- users and balances
+- providers and provider servers
+- channels
+- apps/services
+- country prices
+- admin commands from bot
+- JSON REST API for management
 
-ما تم:
-- إضافة libs/keyboard.js لتنظيف الأزرار من العناصر الفارغة
-- إضافة libs/sender.js ليُرسل الكيبورد بطريقة آمنة في عدة رن تايمز
-- استبدال كل الاستدعاءات الخطّية لـ Api.sendInlineKeyboard بـ libs.sender.sendInlineKeyboard حيثما يلزم
-- تدقيق بسيط لبعض أوامر الإدارة
+## Stack
+- Node.js
+- SQLite
+- Telegraf
+- Express
 
-تشغيل سريع:
-1) استورد/حدث المستودع في لوحة Bot Business على الفرع main
-2) احفظ مفاتيح المزودين عبر Console باستخدام Bot.setProperty (لا تضع المفاتيح في المستودع)
-3) اختبر: /start  و /buy
+## Setup
+1. Copy `.env.example` to `.env`
+2. Fill in `BOT_TOKEN`
+3. Install dependencies:
+   `npm install`
+4. Initialize database:
+   `npm run db:init`
+5. Start app:
+   `npm start`
 
-إن احتجت، سأقوم أيضاً بمراجعة السجلات مباشرةً وصياغة إصلاحات إضافية.
+## Default admin
+The default admin ID is `8338869162` and can be changed in `.env`.
+
+## Features
+- `/start` menu in Arabic
+- user signup/login basics
+- balance tracking
+- provider management via bot/admin actions
+- app management
+- channel management
+- pricing management
+- statistics
+- REST API endpoints under `/api`
+
+## Important
+Do not commit real production secrets to GitHub. Keep `BOT_TOKEN` and provider API keys in `.env` or your deployment platform's secrets manager.
