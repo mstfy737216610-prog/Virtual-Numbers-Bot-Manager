@@ -597,13 +597,23 @@ const ChannelsPage = () => {
           <h2 className="text-4xl font-black text-slate-900 mb-3 tracking-tighter">قنوات الاشتراك الإجباري</h2>
           <p className="text-slate-500 font-bold text-xl">تحكم في القنوات التي يلتزم العميل بالانضمام إليها لاستخدام البوت.</p>
         </div>
-        <button
-          onClick={addChannel}
-          className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center gap-3 active:scale-95 whitespace-nowrap"
-        >
-          <Plus size={24} />
-          <span>تنشيط قناة جديدة</span>
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => {
+              if (confirm('هل تريد حذف كافة القنوات؟')) saveAll([]);
+            }}
+            className="px-6 py-4 bg-red-600/10 text-red-600 rounded-2xl font-bold hover:bg-red-600 hover:text-white transition-all border border-red-600/20 active:scale-95"
+          >
+            حذف الكل
+          </button>
+          <button
+            onClick={addChannel}
+            className="flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center gap-3 active:scale-95 whitespace-nowrap"
+          >
+            <Plus size={24} />
+            <span>تنشيط قناة جديدة</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
