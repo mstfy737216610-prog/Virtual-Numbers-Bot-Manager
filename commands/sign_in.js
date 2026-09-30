@@ -1,17 +1,19 @@
 /*
   Command: sign_in
+  CAPTCHA step and creation button (Arabic)
 */
 var margin = Math.floor(100000 + Math.random() * 900000);
-User.setProperty("captcha_answer", String(margin), "string");
+User.setProperty('captcha_answer_temp', String(margin), 'string');
 
-var text = "✅ - للتحقق: أرسل الرقم الظاهر: `" + margin + "`";
-var buttons = [ [ { text: "رجوع للخلف 🔙", callback_data: "back" } ] ];
-var cleanedButtons = (libs && libs.keyboard && typeof libs.keyboard.cleanKeyboard === 'function') ? libs.keyboard.cleanKeyboard(buttons) : (buttons || []);
+var text = "✅ - لأمان حسابك *وحماية خصوصيتك*، نحتاج للتحقق من *أنك إنساناً ولست روبوتاً* أولاً. ♻️\n\n🔘 - قم بكتابة الرقم الظاهر أمامك *[ `" + margin + "` ]* \n\n☑️ - أرسل لنا *الإجابة الصحيحة* للتحقق من *أنك لست روبوتاً.*";
+var buttons = [ [ { text: 'رجوع للخلف 🔙', callback_data: 'startup' } ] ];
+
+var cleanedButtons = (libs && libs.keyboard && typeof libs.keyboard.cleanKeyboard === 'function') ? libs.keyboard.cleanKeyboard(buttons) : buttons;
 try {
   if (cleanedButtons && cleanedButtons.length > 0 && libs && libs.sender && typeof libs.sender.sendInlineKeyboard === 'function') {
-    libs.sender.sendInlineKeyboard(text, cleanedButtons, { parse_mode: "Markdown" });
+    libs.sender.sendInlineKeyboard(text, cleanedButtons, { parse_mode: 'Markdown' });
   } else if (Api && typeof Api.sendMessage === 'function') {
-    Api.sendMessage(text, { parse_mode: "Markdown" });
+    Api.sendMessage(text, { parse_mode: 'Markdown' });
   } else {
     Bot.sendMessage(text);
   }

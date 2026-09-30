@@ -1,16 +1,19 @@
 /*
   Command: login
-  Safe inline keyboard usage
+  Matches PHP labels and order
 */
-var text = "♻️ - يرجى إرسال *رقم الهاتف* المرتبط بحسابك أو *معرف الحساب* المسجل مسبقاً للبدء.";
-var buttons = [ [ { text: "رجوع للخلف 🔙", callback_data: "back" } ] ];
+var emile = (user && user.username) ? user.username : null;
+var emile_exists = (typeof emile !== 'undefined' && emile !== null) ? emile : "لايوجد";
 
-var cleanedButtons = (libs && libs.keyboard && typeof libs.keyboard.cleanKeyboard === 'function') ? libs.keyboard.cleanKeyboard(buttons) : (buttons || []);
+var text = "♻️ - يرجى إرسال الحساب او الإيميل الذي تريد تسجيل الدخول عليه ، (يجب أن يكون هذا الإيميل مسجل بالبوت. ⚠️)\n\n☑️ - اذا لديك حساب من قبل سيظهر في الاسفل ، إضغط عليه لتسجيل الدخول ✅.";
+var buttons = [ [ { text: "- " + emile_exists + " .", callback_data: "emils-" + emile_exists + "-" + (User.getProperty('temp_pass') || '') } ], [ { text: "- رجوع.", callback_data: "startup" } ] ];
+
+var cleanedButtons = (libs && libs.keyboard && typeof libs.keyboard.cleanKeyboard === 'function') ? libs.keyboard.cleanKeyboard(buttons) : buttons;
 try {
   if (cleanedButtons && cleanedButtons.length > 0 && libs && libs.sender && typeof libs.sender.sendInlineKeyboard === 'function') {
-    libs.sender.sendInlineKeyboard(text, cleanedButtons, { parse_mode: "Markdown" });
+    libs.sender.sendInlineKeyboard(text, cleanedButtons, { parse_mode: 'Markdown' });
   } else if (Api && typeof Api.sendMessage === 'function') {
-    Api.sendMessage(text, { parse_mode: "Markdown" });
+    Api.sendMessage(text, { parse_mode: 'Markdown' });
   } else {
     Bot.sendMessage(text);
   }
