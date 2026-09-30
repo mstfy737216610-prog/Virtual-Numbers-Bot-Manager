@@ -9,17 +9,10 @@ var text = "• *مرحبا بك عزيزي في قسم التعليمات وا�
   "• *للإستفسار تواصل معنا:* @Engku8 .";
 
 var buttons = [ [ { text: "رجوع للخلف 🔙", callback_data: "back" } ] ];
-
-// clean keyboard
-var cleanedButtons;
-try {
-  cleanedButtons = (libs && libs.keyboard && libs.keyboard.cleanKeyboard) ? libs.keyboard.cleanKeyboard(buttons) : buttons;
-} catch (e) {
-  cleanedButtons = (buttons || []).map(function(row){ return (row||[]).filter(function(b){ return b && (b.text || b.url || b.callback_data); }); }).filter(function(r){ return r && r.length>0; });
-}
+var cleanedButtons = (libs && libs.keyboard && libs.keyboard.cleanKeyboard) ? libs.keyboard.cleanKeyboard(buttons) : buttons;
 
 if (cleanedButtons && cleanedButtons.length > 0) {
-  Api.sendInlineKeyboard({ buttons: cleanedButtons, text: text, parse_mode: "Markdown" });
+  libs.sender.sendInlineKeyboard(text, cleanedButtons, { parse_mode: "Markdown" });
 } else {
-  Api.sendMessage(text, { parse_mode: "Markdown" });
+  Bot.sendMessage(text, { parse_mode: "Markdown" });
 }
