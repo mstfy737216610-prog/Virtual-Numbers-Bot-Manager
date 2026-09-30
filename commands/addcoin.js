@@ -1,6 +1,5 @@
 /*
   Admin: addcoin
-  Usage: userId|amount
 */
 var admins = Bot.getProperty('config') && Bot.getProperty('config').admin_ids || ['8338869162'];
 if (admins.indexOf(String(user.telegramid)) === -1) return Bot.sendMessage('ليس لديك صلاحية استخدام هذا الأمر.');

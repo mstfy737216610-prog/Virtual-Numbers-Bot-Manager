@@ -6,7 +6,14 @@ if (!last) return Bot.sendMessage('لا يوجد تفعيل محفوظ للتح�
 var provider = last.provider || (Bot.getProperty('config') && Bot.getProperty('config').default_provider) || 'herosms';
 var activationId = last.activationId || last.id || last.activation_id || null;
 if (!activationId) return Bot.sendMessage('لم أجد معرّف التفعيل في بيانات الحفظ.');
+
 var params = { api_key: (Bot.getProperty('config') && Bot.getProperty('config').providers && Bot.getProperty('config').providers[provider] && Bot.getProperty('config').providers[provider].api_key) || '', activationId: activationId };
-var res = libs.SMSProvider.checkNumberStatus(provider, params);
-if (!res || !res.ok) return Bot.sendMessage('فشل الاتصال بالمزوّد: ' + (res && res.error || 'unknown'));
-Bot.sendMessage('حالة التفعيل:\n' + JSON.stringify(res.data || res.raw || res));
+try {
+  if (libs && libs.SMSProvider && typeof libs.SMSProvider.checkNumberStatus === 'function') {
+    var res = libs.SMSProvider.checkNumberStatus(provider, params);
+    if (!res || !res.ok) return Bot.sendMessage('فشل الاتصال بالمزوّد: ' + (res && res.error || 'unknown'));
+    Bot.sendMessage('حالة التفعيل:\n' + JSON.stringify(res.data || res.raw || res));
+  } else {
+    Bot.sendMessage('خدمة فحص الرسائل غير متاحة حالياً.');
+  }
+} catch (e) { Bot.sendMessage('حدث خطأ أثناء فحص الرسائل.'); }

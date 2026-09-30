@@ -1,6 +1,5 @@
 /*
   Command: buy_number
-  Usage: send '/buy' or text 'buy:code'
 */
 function loadConfig() {
   var cfg = Bot.getProperty('config');
@@ -29,12 +28,16 @@ if (text && text.toLowerCase().indexOf('buy:') === 0) {
   if (!country) return Bot.sendMessage('البلد غير متوفر أو رمز غير صحيح. استخدم /buy لعرض الدول.');
 
   var confirmButtons = [ [ { text: 'تأكيد الشراء', callback_data: 'confirm_buy:' + provider + ':' + country.code }, { text: 'إلغاء', callback_data: 'back' } ] ];
-  var cleanedConfirm = (libs && libs.keyboard && libs.keyboard.cleanKeyboard) ? libs.keyboard.cleanKeyboard(confirmButtons) : confirmButtons;
-  if (cleanedConfirm && cleanedConfirm.length > 0) {
-    libs.sender.sendInlineKeyboard('⚠️ ستقوم بمحاولة شراء رقم حقيقي. هل تريد المتابعة؟', cleanedConfirm);
-  } else {
-    Bot.sendMessage('⚠️ ستقوم بمحاولة شراء رقم حقيقي. الرجاء تاكيد عبر الاوامر.');
-  }
+  var cleanedConfirm = (libs && libs.keyboard && typeof libs.keyboard.cleanKeyboard === 'function') ? libs.keyboard.cleanKeyboard(confirmButtons) : (confirmButtons || []);
+  try {
+    if (cleanedConfirm && cleanedConfirm.length > 0 && libs && libs.sender && typeof libs.sender.sendInlineKeyboard === 'function') {
+      libs.sender.sendInlineKeyboard('⚠️ ستقوم بمحاولة شراء رقم حقيقي. هل تريد المتابعة؟', cleanedConfirm);
+    } else if (Api && typeof Api.sendMessage === 'function') {
+      Api.sendMessage('⚠️ ستقوم بمحاولة شراء رقم حقيقي. الرجاء تاكيد عبر الاوامر.');
+    } else {
+      Bot.sendMessage('⚠️ ستقوم بمحاولة شراء رقم حقيقي. الرجاء تاكيد عبر الاوامر.');
+    }
+  } catch (e) { Bot.sendMessage('⚠️ ستقوم بمحاولة شراء رقم حقيقي. الرجاء تاكيد عبر الاوامر.'); }
   return;
 }
 
@@ -46,9 +49,13 @@ var prov = config.providers[defaultProv];
 (prov.countries || []).forEach(function(c){ if (!c.enabled) return; rows.push([ { text: c.name + ' - ' + c.price + ' ' + (config.bot && config.bot.currency || 'USD'), callback_data: 'buycountry:' + c.code } ]); });
 if (rows.length == 0) return Bot.sendMessage('لا توجد دول متاحة للشراء.');
 
-var cleanedRows = (libs && libs.keyboard && libs.keyboard.cleanKeyboard) ? libs.keyboard.cleanKeyboard(rows) : rows;
-if (cleanedRows && cleanedRows.length > 0) {
-  libs.sender.sendInlineKeyboard('اختر الدولة لشراء رقم من ' + (config.bot && config.bot.currency || 'USD'), cleanedRows);
-} else {
-  Bot.sendMessage('لا توجد دول متاحة للعرض حالياً.');
-}
+var cleanedRows = (libs && libs.keyboard && typeof libs.keyboard.cleanKeyboard === 'function') ? libs.keyboard.cleanKeyboard(rows) : (rows || []);
+try {
+  if (cleanedRows && cleanedRows.length > 0 && libs && libs.sender && typeof libs.sender.sendInlineKeyboard === 'function') {
+    libs.sender.sendInlineKeyboard('اختر الدولة لشراء رقم من ' + (config.bot && config.bot.currency || 'USD'), cleanedRows);
+  } else if (Api && typeof Api.sendMessage === 'function') {
+    Api.sendMessage('اختر الدولة لشراء رقم من ' + (config.bot && config.bot.currency || 'USD'));
+  } else {
+    Bot.sendMessage('اختر الدولة لشراء رقم من ' + (config.bot && config.bot.currency || 'USD'));
+  }
+} catch (e) { Bot.sendMessage('اختر الدولة لشراء رقم من ' + (config.bot && config.bot.currency || 'USD')); }

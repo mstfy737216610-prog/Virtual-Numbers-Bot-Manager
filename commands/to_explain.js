@@ -1,18 +1,15 @@
 /*
   Command: to_explain
 */
-
-var text = "• *مرحبا بك عزيزي في قسم التعليمات والشروط.*\n\n" +
-  "• *شروط البوت :* ↘️\n\n" +
-  "- هذا البوت يقوم بجلب أرقام وهمية لجميع مواقع السوشيال ميديا.\n" +
-  "- البوت لا يتحمل مسؤولية الأرقام في حالة أنها انحظرت.\n\n" +
-  "• *للإستفسار تواصل معنا:* @Engku8 .";
-
+var text = "• شروط البوت:\n- البوت يقدم أرقامًا افتراضية.\n- لا نتحمل مسؤولية أي إساءة استخدام.\n\nللاستفسار تواصل مع الدعم.";
 var buttons = [ [ { text: "رجوع للخلف 🔙", callback_data: "back" } ] ];
-var cleanedButtons = (libs && libs.keyboard && libs.keyboard.cleanKeyboard) ? libs.keyboard.cleanKeyboard(buttons) : buttons;
-
-if (cleanedButtons && cleanedButtons.length > 0) {
-  libs.sender.sendInlineKeyboard(text, cleanedButtons, { parse_mode: "Markdown" });
-} else {
-  Bot.sendMessage(text, { parse_mode: "Markdown" });
-}
+var cleanedButtons = (libs && libs.keyboard && typeof libs.keyboard.cleanKeyboard === 'function') ? libs.keyboard.cleanKeyboard(buttons) : (buttons || []);
+try {
+  if (cleanedButtons && cleanedButtons.length > 0 && libs && libs.sender && typeof libs.sender.sendInlineKeyboard === 'function') {
+    libs.sender.sendInlineKeyboard(text, cleanedButtons, { parse_mode: "Markdown" });
+  } else if (Api && typeof Api.sendMessage === 'function') {
+    Api.sendMessage(text, { parse_mode: "Markdown" });
+  } else {
+    Bot.sendMessage(text);
+  }
+} catch (e) { Bot.sendMessage(text); }
