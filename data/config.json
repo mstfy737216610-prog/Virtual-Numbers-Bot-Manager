@@ -6,7 +6,8 @@
       "enabled": true,
       "api_key": "",
       "countries": [
-        { "code": "us", "name": "United States", "enabled": true, "price": 2.5 }
+        { "code": "us", "name": "United States", "enabled": true, "price": 2.5 },
+        { "code": "england", "name": "England (Vodafone)", "enabled": true, "price": 2.5 }
       ]
     },
     "herosms": {

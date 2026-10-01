@@ -1,17 +1,16 @@
 /*
-  Command: buy_number
+  Command: /buy
   Usage:
     - Send '/buy' to see available countries
     - Or send text: 'buy:us' to buy from country code 'us'
+    - Admin can confirm purchase via 'confirm_buy:<provider>:<code>'
 */
 
-// helper to load config from repo raw (fallback)
+// ============ Load config ============
 function loadConfig() {
-  // try runtime config
   var cfg = Bot.getProperty('config');
   if (cfg) return cfg;
 
-  // fallback: fetch from repo raw
   try {
     var raw = HTTP.get('https://raw.githubusercontent.com/mstfy737216610-prog/Virtual-Numbers-Bot-Manager/main/data/config.json');
     if (raw && raw.status == 200) {
@@ -21,59 +20,89 @@ function loadConfig() {
     }
   } catch (e) {}
 
-  // last resort default
-  return {
-    default_provider: '5sim',
-    providers: { }
-  };
+  return { default_provider: '5sim', providers: {} };
 }
 
+// ============ Safe send keyboard ============
+function safeSendKeyboard(text, rows) {
+  var cleaned = (libs && libs.keyboard && typeof libs.keyboard.cleanKeyboard === 'function')
+    ? libs.keyboard.cleanKeyboard(rows)
+    : (rows || []);
+
+  if (!cleaned || cleaned.length === 0) {
+    return Bot.sendMessage(text);
+  }
+
+  try {
+    if (libs && libs.sender && typeof libs.sender.sendInlineKeyboard === 'function') {
+      return libs.sender.sendInlineKeyboard(text, cleaned);
+    }
+    if (Api && typeof Api.sendInlineKeyboard === 'function') {
+      return Api.sendInlineKeyboard({ buttons: cleaned, text: text });
+    }
+    if (typeof Api !== 'undefined' && typeof Api.sendMessage === 'function') {
+      return Api.sendMessage(text);
+    }
+  } catch (e) {}
+
+  return Bot.sendMessage(text);
+}
+
+// ============ Main ============
 var config = loadConfig();
-
-// parse input
 var text = message && message.text ? message.text.trim() : '';
+var currency = (config.bot && config.bot.currency) || 'USD';
 
+// -------- Buy by code: buy:us --------
 if (text && text.toLowerCase().indexOf('buy:') === 0) {
   var code = text.split(':')[1];
   if (!code) return Bot.sendMessage('أدخل رمز الدولة بعد buy:, مثال: buy:us');
 
-  // find provider country
-  var provider = config.default_provider || Object.keys(config.providers || {})[0];
-  var prov = config.providers && config.providers[provider];
+  var providerKey = config.default_provider || Object.keys(config.providers || {})[0];
+  var prov = config.providers && config.providers[providerKey];
   if (!prov) return Bot.sendMessage('لا يوجد مزود مكوّن بعد. الرجاء الاتصال بالمطور.');
 
-  var country = (prov.countries || []).find(function(c){ return c.code == code; });
-  if (!country) return Bot.sendMessage('البلد غير متوفر أو رمز غير صحيح. استخدم /buy لعرض الدول.');
-
-  Bot.sendMessage('جاري محاولة شراء رقم لبلد: ' + country.name + '، السعر: ' + country.price + ' ' + (config.bot && config.bot.currency || 'USD'));
-
-  var params = { api_key: prov.api_key, country: country.code, operator: '', app: 'whatsapp' };
-  var res = libs.SMSProvider.buyNumber(provider, params);
-  if (!res) return Bot.sendMessage('فشل الاتصال بالمزوّد.');
-
-  if (res.status && (res.status == 200 || res.status == 201)) {
-    Bot.sendMessage('تم شراء الرقم بنجاح:\n' + JSON.stringify(res.data || res.body || res));
-    // store activation info in user property for checking
-    User.setProperty('last_activation', res.data || res.body || res, 'json');
-  } else {
-    Bot.sendMessage('خطأ من المزوّد: ' + JSON.stringify(res));
+  var country = (prov.countries || []).find(function(c) {
+    return String(c.code).toLowerCase() === String(code).toLowerCase();
+  });
+  if (!country) {
+    return Bot.sendMessage('البلد غير متوفر أو رمز غير صحيح. استخدم /buy لعرض الدول.');
   }
-  return;
+
+  var confirmButtons = [
+    [
+      { text: '✅ تأكيد الشراء', callback_data: 'confirm_buy:' + providerKey + ':' + country.code },
+      { text: '❌ إلغاء', callback_data: 'back' }
+    ]
+  ];
+
+  return safeSendKeyboard(
+    '⚠️ ستقوم بمحاولة شراء رقم حقيقي لبلد: ' + country.name +
+    '\nالسعر: ' + country.price + ' ' + currency +
+    '\n\nهل تريد المتابعة؟',
+    confirmButtons
+  );
 }
 
-// show countries
+// -------- Show list of countries --------
 var rows = [];
 var providerKeys = Object.keys(config.providers || {});
-if (providerKeys.length == 0) return Bot.sendMessage('لا توجد دول مهيّأة في الإعدادات.');
+if (providerKeys.length === 0) {
+  return Bot.sendMessage('لا توجد دول مهيّأة في الإعدادات.');
+}
 
 var defaultProv = config.default_provider || providerKeys[0];
 var prov = config.providers[defaultProv];
 
-(prov.countries || []).forEach(function(c){
+(prov.countries || []).forEach(function(c) {
   if (!c.enabled) return;
-  rows.push([ { text: c.name + ' - ' + c.price + ' ' + (config.bot && config.bot.currency || 'USD'), callback_data: 'buycountry:' + c.code } ]);
+  rows.push([
+    { text: c.name + ' - ' + c.price + ' ' + currency, callback_data: 'buycountry:' + c.code }
+  ]);
 });
 
-if (rows.length == 0) return Bot.sendMessage('لا توجد دول متاحة للشراء.');
+if (rows.length === 0) {
+  return Bot.sendMessage('لا توجد دول متاحة للشراء.');
+}
 
-Api.sendInlineKeyboard({ buttons: rows, text: 'اختر الدولة لشراء رقم من ' + (config.bot && config.bot.currency || 'USD') });
+return safeSendKeyboard('اختر الدولة لشراء رقم من ' + currency, rows);
