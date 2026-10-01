@@ -7,5 +7,5 @@ startBot();
 
 app.listen(config.PORT, () => {
   console.log(`Server listening on http://localhost:${config.PORT}`);
-  console.log(`Bot started on Telegram.`);
+  console.log('Bot app started.');
 });

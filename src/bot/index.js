@@ -2,15 +2,25 @@ import { Telegraf } from 'telegraf';
 import { config } from '../config.js';
 import db from '../db/index.js';
 import { mainKeyboard, adminKeyboard } from './keyboards.js';
-import { handleStart, handleStats, handleTerms, handleLogin, handleSignup, handleAdmin } from './commands/start.js';
-import { executeAdminCommand } from './commands/admin.js';
-import { getOrCreateUserFromTelegram } from './commands/start.js';
-import { getProviders } from '../services/providerRegistry.js';
-import { startBuy, providerSelected, appSelected, countrySelected, confirmBuy } from './commands/buy.js';
+import {
+  handleStart,
+  handleStats,
+  handleTerms,
+  handleLogin,
+  handleSignup,
+  handleAdmin,
+  handleBalance,
+  handleOrders,
+  ensureAdmin,
+  getOrCreateUserFromTelegram,
+} from './commands/start.js';
+import { handleAdminAction, executeAdminCommand } from './commands/admin.js';
+import { createOrder } from '../services/orders.js';
+import { getProviders, getAppsByProvider, getCountryList, getPriceFor } from '../services/providerRegistry.js';
 
 export function startBot() {
   if (!config.BOT_TOKEN) {
-    console.warn('BOT_TOKEN is not set. Bot will not start.');
+    console.warn('⚠️ BOT_TOKEN غير مضبوط. لن يبدأ البوت.');
     return null;
   }
 
@@ -20,28 +30,94 @@ export function startBot() {
     await handleStart(ctx);
   });
 
-  bot.command('admin', async (ctx) => {
-    await handleAdmin(ctx);
+  bot.command('start', async (ctx) => {
+    await handleStart(ctx);
   });
 
   bot.command('stats', async (ctx) => {
     await handleStats(ctx);
   });
 
-  bot.command('buy', async (ctx) => {
-    await startBuy(ctx);
+  bot.command('admin', async (ctx) => {
+    await handleAdmin(ctx);
+  });
+
+  bot.command('balance', async (ctx) => {
+    await handleBalance(ctx);
+  });
+
+  bot.command('orders', async (ctx) => {
+    await handleOrders(ctx);
   });
 
   bot.action('startup', async (ctx) => {
     await handleStart(ctx);
   });
 
-  bot.action('login', async (ctx) => {
-    await handleLogin(ctx);
+  bot.action('buy', async (ctx) => {
+    const providers = getProviders();
+    const keyboard = {
+      inline_keyboard: providers.map((provider) => [{ text: provider.name, callback_data: `buy_provider:${provider.code}` }])
+    };
+    return ctx.reply('💰 - اختر المزود', { reply_markup: keyboard });
   });
 
-  bot.action('signup', async (ctx) => {
-    await handleSignup(ctx);
+  bot.action(/^buy_provider:(.+)$/, async (ctx) => {
+    const providerCode = ctx.match[1];
+    const apps = getAppsByProvider(providerCode);
+    if (!apps.length) {
+      return ctx.reply('⚠️ - لا توجد تطبيقات لهذا المزود.');
+    }
+
+    const keyboard = {
+      inline_keyboard: apps
+        .map((app) => [{ text: app.name, callback_data: `buy_app:${providerCode}:${app.code}` }])
+        .concat([[{ text: 'رجوع 🔙', callback_data: 'startup' }]])
+    };
+
+    return ctx.editMessageText('📱 - اختر التطبيق', { reply_markup: keyboard });
+  });
+
+  bot.action(/^buy_app:([^:]+):([^:]+)$/, async (ctx) => {
+    const [, providerCode, appCode] = ctx.match;
+    const countries = getCountryList();
+    const keyboard = {
+      inline_keyboard: countries
+        .map((country) => [{ text: `${country.name} (${country.code})`, callback_data: `buy_country:${providerCode}:${appCode}:${country.code}` }])
+        .concat([[{ text: 'رجوع 🔙', callback_data: 'startup' }]])
+    };
+    return ctx.editMessageText('🌍 - اختر الدولة', { reply_markup: keyboard });
+  });
+
+  bot.action(/^buy_country:([^:]+):([^:]+):([^:]+)$/, async (ctx) => {
+    const [, providerCode, appCode, countryCode] = ctx.match;
+    const price = getPriceFor(providerCode, appCode, countryCode, 'any');
+    const text = `سعر الخدمة: ${price !== null ? `${price} روبل` : 'غير متوفر'}\n\n✅ - هل تريد المتابعة؟`;
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: 'تأكيد الشراء ✅', callback_data: `buy_confirm:${providerCode}:${appCode}:${countryCode}:any` }],
+        [{ text: 'إلغاء ❌', callback_data: 'startup' }]
+      ]
+    };
+    return ctx.editMessageText(text, { reply_markup: keyboard });
+  });
+
+  bot.action(/^buy_confirm:([^:]+):([^:]+):([^:]+):(.+)$/, async (ctx) => {
+    const [, providerCode, appCode, countryCode, operator] = ctx.match;
+    const telegramId = String(ctx.from.id);
+
+    try {
+      const result = await createOrder({ telegramId, providerCode, appCode, countryCode, operator });
+      return ctx.editMessageText(`✅ - تم إنشاء الطلب بنجاح.\nرقم الطلب: *${result.orderId}*\nرقم الهاتف: *${result.external.number}*`, {
+        parse_mode: 'Markdown'
+      });
+    } catch (error) {
+      return ctx.editMessageText(`❌ - فشل إنشاء الطلب: ${error.message || error.toString()}`);
+    }
+  });
+
+  bot.action('login', async (ctx) => {
+    await handleLogin(ctx);
   });
 
   bot.action('terms', async (ctx) => {
@@ -52,47 +128,28 @@ export function startBot() {
     await handleStats(ctx);
   });
 
+  bot.action('balance', async (ctx) => {
+    await handleBalance(ctx);
+  });
+
+  bot.action('orders', async (ctx) => {
+    await handleOrders(ctx);
+  });
+
   bot.action('admin', async (ctx) => {
     await handleAdmin(ctx);
   });
 
-  bot.action(/^admin_(.+)$/, async (ctx) => {
-    const action = ctx.match[1];
-    const adminActions = {
-      add_provider: 'admin_add_provider',
-      list_providers: 'admin_list_providers',
-      add_app: 'admin_add_app',
-      list_apps: 'admin_list_apps',
-      add_channel: 'admin_add_channel',
-      list_channels: 'admin_list_channels',
-      add_price: 'admin_add_price',
-      list_prices: 'admin_list_prices',
-      add_coin: 'admin_add_coin',
-      dec_coin: 'admin_dec_coin',
-      stats: 'admin_stats',
-    };
-    const realAction = adminActions[action] || action;
-    return ctx.reply(`⚠️ - تم تحديد الإدارة: ${realAction}. استخدم الأوامر النصية في لوحة الإدارة.`);
+  bot.action(/^admin_list_(.+)$/, async (ctx) => {
+    await handleAdminAction(ctx, ctx.match[0]);
   });
 
-  bot.action(/^buy_provider:(.+)$/, async (ctx) => {
-    const providerCode = ctx.match[1];
-    await providerSelected(ctx, providerCode);
+  bot.action(/^admin_help_(.+)$/, async (ctx) => {
+    await handleAdminAction(ctx, ctx.match[0]);
   });
 
-  bot.action(/^buy_app:([^:]+):([^:]+)$/, async (ctx) => {
-    const [, providerCode, appCode] = ctx.match;
-    await appSelected(ctx, providerCode, appCode);
-  });
-
-  bot.action(/^buy_country:([^:]+):([^:]+):([^:]+)$/, async (ctx) => {
-    const [, providerCode, appCode, countryCode] = ctx.match;
-    await countrySelected(ctx, providerCode, appCode, countryCode);
-  });
-
-  bot.action(/^buy_confirm:([^:]+):([^:]+):([^:]+):(.+)$/, async (ctx) => {
-    const [, providerCode, appCode, countryCode, operator] = ctx.match;
-    await confirmBuy(ctx, providerCode, appCode, countryCode, operator || 'any');
+  bot.action(/^admin_stats$/, async (ctx) => {
+    await handleAdminAction(ctx, 'admin_stats');
   });
 
   bot.on('text', async (ctx) => {
@@ -103,15 +160,23 @@ export function startBot() {
       await executeAdminCommand(ctx, text);
       return;
     }
+    if (lower.startsWith('addserver ')) {
+      await executeAdminCommand(ctx, text);
+      return;
+    }
     if (lower.startsWith('addapp ')) {
       await executeAdminCommand(ctx, text);
       return;
     }
-    if (lower.startsWith('addchannel ')) {
+    if (lower.startsWith('addcountry ')) {
       await executeAdminCommand(ctx, text);
       return;
     }
     if (lower.startsWith('addprice ')) {
+      await executeAdminCommand(ctx, text);
+      return;
+    }
+    if (lower.startsWith('addchannel ')) {
       await executeAdminCommand(ctx, text);
       return;
     }
@@ -123,8 +188,19 @@ export function startBot() {
       await executeAdminCommand(ctx, text);
       return;
     }
-    if (lower.startsWith('stats')) {
+
+    if (lower === 'stats') {
       await handleStats(ctx);
+      return;
+    }
+
+    if (lower === 'balance') {
+      await handleBalance(ctx);
+      return;
+    }
+
+    if (lower === 'orders') {
+      await handleOrders(ctx);
       return;
     }
 
