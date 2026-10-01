@@ -6,6 +6,7 @@
       "enabled": true,
       "api_key": "",
       "countries": [
+        { "code": "us", "name": "United States", "enabled": true, "price": 2.5 },
         { "code": "england", "name": "England (Vodafone)", "enabled": true, "price": 2.5 }
       ]
     },
@@ -34,7 +35,7 @@
     { "name": "TikTok", "enabled": true }
   ],
   "bot": {
-    "name": "بوتي بوتي بوتي",
+    "name": "Virtual Numbers Bot",
     "currency": "USD"
   }
 }

@@ -1,16 +1,36 @@
-# Virtual Numbers Bot - بوتي بوتي بوتي
+# Virtual Numbers Bot - بوت الأرقام الافتراضية
 
-تحديث: أُجريت تصحيحات تغطّي حالات تشغيل مختلفة (بما في ذلك بيئات لا تدعم Api.sendInlineKeyboard).
+بوت تلغرام لبيع الأرقام الافتراضية، مبني على منصة Bots.Business.
 
-ما تم:
-- إضافة libs/keyboard.js لتنظيف الأزرار من العناصر الفارغة
-- إضافة libs/sender.js ليُرسل الكيبورد بطريقة آمنة في عدة رن تايمز
-- استبدال كل الاستدعاءات الخطّية لـ Api.sendInlineKeyboard بـ libs.sender.sendInlineKeyboard حيثما يلزم
-- تدقيق بسيط لبعض أوامر الإدارة
+---
 
-تشغيل سريع:
-1) استورد/حدث المستودع في لوحة Bot Business على الفرع main
-2) احفظ مفاتيح المزودين عبر Console باستخدام Bot.setProperty (لا تضع المفاتيح في المستودع)
-3) اختبر: /start  و /buy
+## ✨ الميزات
 
-إن احتجت، سأقوم أيضاً بمراجعة السجلات مباشرةً وصياغة إصلاحات إضافية.
+- لوحة تحكم إدارية كاملة (إضافة/حذف دول، إدارة الأسعار، القنوات)
+- نظام محفظة ونقاط بسيط (`addcoin` / `delcoin`)
+- أمر `buy_number` لشراء الأرقام و `check_sms` للتحقق من الحالة
+- `libs/SMSProvider.js` — غلاف موحّد لمزودي 5sim و HeroSMS
+- `libs/keyboard.js` — تنظيف الأزرار من العناصر الفارغة `{}`
+- `libs/sender.js` — إرسال آمن للـ inline keyboard في عدة بيئات تشغيل
+- `data/config.json` كإعداد أولي، ثم يُدار من خلال `Bot.getProperty('config')`
+
+---
+
+## 🚀 تشغيل سريع
+
+1. استورد/حدّث المستودع في لوحة Bots.Business على الفرع `main`
+2. احفظ مفاتيح المزودين عبر Console باستخدام `Bot.setProperty` (لا تضع المفاتيح في المستودع)
+3. اختبر الأوامر: `/start` و `/buy`
+
+---
+
+## 🔑 مفاتيح API
+
+لا تُخزَّن المفاتيح في المستودع مطلقاً. استخدم إحدى الطريقتين:
+
+**طريقة 1 — عبر Console في Bots.Business:**
+
+```javascript
+Bot.setProperty("herosms_api_key", "ضع_المفتاح_هنا", "string");
+Bot.setProperty("spark_api_key", "ضع_المفتاح_هنا", "string");
+Bot.setProperty("five_sim_api_key", "ضع_المفتاح_هنا", "string");

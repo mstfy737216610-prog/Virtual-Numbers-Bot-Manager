@@ -1,11 +1,49 @@
 /*
-  Admin: statsbot2
+  Command: statsbot2
+  Admin: Show basic bot statistics
+  Usage: statsbot2
 */
-var admins = Bot.getProperty('config') && Bot.getProperty('config').admin_ids || ['8338869162'];
-if (admins.indexOf(String(user.telegramid)) === -1) return Bot.sendMessage('ليس لديك صلاحية استخدام هذا الأمر.');
 
-var totalSales = Bot.getProperty('total_sales') || 0;
-var totalActivations = Bot.getProperty('total_activations') || 0;
-var revenue = Bot.getProperty('revenue') || 0;
+var config = Bot.getProperty('config') || {};
+var admins = config.admin_ids || ['8338869162'];
 
-Bot.sendMessage('🔎 إحصائيات البوت:\nمجموع المبيعات: ' + totalSales + '\nمجموع التفعيلات: ' + totalActivations + '\nالإيرادات التقريبية: ' + revenue);
+if (admins.indexOf(String(user.telegramid)) === -1) {
+  return Bot.sendMessage('ليس لديك صلاحية استخدام هذا الأمر.');
+}
+
+// ============ Read stats ============
+var totalSales = Number(Bot.getProperty('total_sales')) || 0;
+var totalActivations = Number(Bot.getProperty('total_activations')) || 0;
+var revenue = Number(Bot.getProperty('revenue')) || 0;
+
+// ============ Additional stats from config ============
+var currency = (config.bot && config.bot.currency) || 'USD';
+var providerKeys = Object.keys(config.providers || {});
+var totalCountries = 0;
+
+providerKeys.forEach(function(p) {
+  var prov = config.providers[p] || {};
+  totalCountries += (prov.countries || []).length;
+});
+
+var totalChannels = (config.channels || []).length;
+
+// ============ Format message ============
+var msg =
+  '📊 *إحصائيات البوت*\n' +
+  '━━━━━━━━━━━━━━━\n' +
+  '💰 مجموع المبيعات: *' + totalSales + '*\n' +
+  '📨 مجموع التفعيلات: *' + totalActivations + '*\n' +
+  '💵 الإيرادات التقريبية: *' + revenue + ' ' + currency + '*\n' +
+  '━━━━━━━━━━━━━━━\n' +
+  '🌍 عدد الدول: *' + totalCountries + '*\n' +
+  '🔌 عدد المزودين: *' + providerKeys.length + '*\n' +
+  '📢 عدد القنوات: *' + totalChannels + '*\n' +
+  '━━━━━━━━━━━━━━━';
+
+try {
+  Bot.sendMessage(msg, { parse_mode: 'Markdown' });
+} catch (e) {
+  // إذا رفض Markdown، أرسل بدون تنسيق
+  Bot.sendMessage(msg.replace(/\*/g, ''));
+}
