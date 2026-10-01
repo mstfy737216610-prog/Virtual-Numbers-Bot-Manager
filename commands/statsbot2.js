@@ -11,12 +11,9 @@ if (admins.indexOf(String(user.telegramid)) === -1) {
   return Bot.sendMessage('ليس لديك صلاحية استخدام هذا الأمر.');
 }
 
-// ============ Read stats ============
 var totalSales = Number(Bot.getProperty('total_sales')) || 0;
 var totalActivations = Number(Bot.getProperty('total_activations')) || 0;
 var revenue = Number(Bot.getProperty('revenue')) || 0;
-
-// ============ Additional stats from config ============
 var currency = (config.bot && config.bot.currency) || 'USD';
 var providerKeys = Object.keys(config.providers || {});
 var totalCountries = 0;
@@ -27,10 +24,7 @@ providerKeys.forEach(function(p) {
 });
 
 var totalChannels = (config.channels || []).length;
-
-// ============ Format message ============
-var msg =
-  '📊 *إحصائيات البوت*\n' +
+var msg = '📊 *إحصائيات البوت*\n' +
   '━━━━━━━━━━━━━━━\n' +
   '💰 مجموع المبيعات: *' + totalSales + '*\n' +
   '📨 مجموع التفعيلات: *' + totalActivations + '*\n' +
@@ -44,6 +38,5 @@ var msg =
 try {
   Bot.sendMessage(msg, { parse_mode: 'Markdown' });
 } catch (e) {
-  // إذا رفض Markdown، أرسل بدون تنسيق
   Bot.sendMessage(msg.replace(/\*/g, ''));
 }

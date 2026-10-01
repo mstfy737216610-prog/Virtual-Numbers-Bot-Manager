@@ -1,4 +1,4 @@
- /*
+/*
   Command: manageprices
   Admin: run to list all countries and prices
   Usage: manageprices
@@ -40,7 +40,4 @@ if (!lines.length) {
   return Bot.sendMessage('لا توجد دول محددة.');
 }
 
-Bot.sendMessage(
-  '💰 الأسعار (' + totalCountries + ' دولة):\n\n' +
-  lines.join('\n').trim()
-);
+Bot.sendMessage('💰 الأسعار (' + totalCountries + ' دولة):\n\n' + lines.join('\n').trim());
